@@ -88,6 +88,9 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:gotrue-kt:3.0.0")
     implementation("io.ktor:ktor-client-android:3.0.0")
 
+    // Chrome Custom Tabs for OAuth
+    implementation("androidx.browser:browser:1.8.0")
+
     // Tests
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
