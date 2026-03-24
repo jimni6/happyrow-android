@@ -25,13 +25,24 @@ android {
         buildConfigField("String", "API_BASE_URL", "\"${project.findProperty("API_BASE_URL") ?: "https://happyrow-core.onrender.com/event/configuration/api/v1"}\"")
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file(project.findProperty("KEYSTORE_FILE") ?: "happyrow-release.jks")
+            storePassword = project.findProperty("KEYSTORE_PASSWORD") as String? ?: ""
+            keyAlias = project.findProperty("KEY_ALIAS") as String? ?: "happyrow"
+            keyPassword = project.findProperty("KEY_PASSWORD") as String? ?: ""
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
