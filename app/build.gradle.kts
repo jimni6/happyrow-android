@@ -15,8 +15,17 @@ android {
         applicationId = "com.happyrow.android"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+
+        val gitTag = providers.exec {
+            commandLine("git", "describe", "--tags", "--abbrev=0")
+        }.standardOutput.asText.getOrElse("v1.0.0").trim()
+        val tagVersion = gitTag.removePrefix("v")
+        val commitCount = providers.exec {
+            commandLine("git", "rev-list", "--count", "HEAD")
+        }.standardOutput.asText.getOrElse("1").trim().toIntOrNull() ?: 1
+
+        versionCode = commitCount
+        versionName = tagVersion
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
