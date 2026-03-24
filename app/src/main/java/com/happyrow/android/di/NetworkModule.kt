@@ -16,6 +16,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
+import com.happyrow.android.data.remote.TokenProvider
 import javax.inject.Singleton
 
 @Module
@@ -45,8 +46,8 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideAuthInterceptor(): AuthInterceptor {
-        return AuthInterceptor { null }
+    fun provideAuthInterceptor(tokenProvider: TokenProvider): AuthInterceptor {
+        return AuthInterceptor { tokenProvider.getToken() }
     }
 
     @Provides
