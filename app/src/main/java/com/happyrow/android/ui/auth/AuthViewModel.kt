@@ -73,10 +73,34 @@ class AuthViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            val session = authRepository.getCurrentSession()
-            if (session != null) {
-                _authState.value = AuthState.Authenticated(session.user, session)
-            } else {
+            try {
+                val session = authRepository.getCurrentSession()
+                if (session != null) {
+                    _authState.value = AuthState.Authenticated(session.user, session)
+                } else {
+                    _authState.value = AuthState.Unauthenticated
+                }
+            } catch (e: Exception) {
+                handleSessionError(e)
+            }
+        }
+    }
+
+    private suspend fun handleSessionError(e: Exception) {
+        val message = e.message ?: ""
+        if (message.contains("session_not_found") || message.contains("refresh_token_not_found")) {
+            try { authRepository.signOut() } catch (_: Exception) {}
+            _authState.value = AuthState.Unauthenticated
+        } else {
+            try {
+                authRepository.refreshSession()
+                val session = authRepository.getCurrentSession()
+                if (session != null) {
+                    _authState.value = AuthState.Authenticated(session.user, session)
+                } else {
+                    _authState.value = AuthState.Unauthenticated
+                }
+            } catch (_: Exception) {
                 _authState.value = AuthState.Unauthenticated
             }
         }
