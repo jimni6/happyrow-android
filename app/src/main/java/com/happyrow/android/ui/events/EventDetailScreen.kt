@@ -2,12 +2,16 @@ package com.happyrow.android.ui.events
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -18,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -29,6 +34,8 @@ import com.happyrow.android.ui.components.AppTopBar
 import com.happyrow.android.ui.components.ErrorMessage
 import com.happyrow.android.ui.components.HappyRowButton
 import com.happyrow.android.ui.components.LoadingScreen
+import com.happyrow.android.ui.events.components.AddParticipantDialog
+import com.happyrow.android.ui.events.components.ParticipantList
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -36,12 +43,16 @@ import java.util.Locale
 @Composable
 fun EventDetailScreen(
     navController: NavHostController,
-    eventDetailViewModel: EventDetailViewModel = hiltViewModel()
+    eventDetailViewModel: EventDetailViewModel = hiltViewModel(),
+    participantsViewModel: ParticipantsViewModel = hiltViewModel()
 ) {
     val authViewModel: AuthViewModel = hiltViewModel()
     val uiState by eventDetailViewModel.uiState.collectAsStateWithLifecycle()
     val authState by authViewModel.authState.collectAsStateWithLifecycle()
+    val participantsState by participantsViewModel.uiState.collectAsStateWithLifecycle()
+    val addError by participantsViewModel.addError.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showAddParticipantDialog by remember { mutableStateOf(false) }
 
     val userId = (authState as? AuthState.Authenticated)?.user?.id
 
@@ -49,38 +60,29 @@ fun EventDetailScreen(
         if (uiState is EventDetailUiState.Deleted) {
             navController.popBackStack()
         }
+        if (uiState is EventDetailUiState.Success) {
+            participantsViewModel.loadParticipants((uiState as EventDetailUiState.Success).event.id)
+        }
     }
 
-    val dateFormatter = remember {
-        SimpleDateFormat("d MMMM yyyy", Locale.FRENCH)
-    }
+    val dateFormatter = remember { SimpleDateFormat("d MMMM yyyy", Locale.FRENCH) }
 
     Scaffold(
         topBar = {
-            AppTopBar(
-                title = "Détail",
-                user = null,
-                onNavigateBack = { navController.navigateUp() }
-            )
+            AppTopBar(title = "Détail", user = null, onNavigateBack = { navController.navigateUp() })
         }
     ) { padding ->
         when (val state = uiState) {
             is EventDetailUiState.Loading -> LoadingScreen(
                 message = "Chargement…",
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
+                modifier = Modifier.fillMaxSize().padding(padding)
             )
             is EventDetailUiState.Error -> ErrorMessage(
                 message = state.message,
                 onRetry = { eventDetailViewModel.loadEvent() },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
+                modifier = Modifier.fillMaxSize().padding(padding)
             )
-            is EventDetailUiState.Deleted -> {
-                // Navigation handled in LaunchedEffect; show nothing while popping.
-            }
+            is EventDetailUiState.Deleted -> {}
             is EventDetailUiState.Success -> {
                 Column(
                     modifier = Modifier
@@ -90,33 +92,56 @@ fun EventDetailScreen(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    Text(state.event.name, style = MaterialTheme.typography.headlineSmall)
                     Text(
-                        text = state.event.name,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = dateFormatter.format(Date(state.event.date)),
+                        dateFormatter.format(Date(state.event.date)),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Text(state.event.location, style = MaterialTheme.typography.bodyLarge)
                     Text(
-                        text = state.event.location,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Type : ${state.event.type.name}",
+                        "Type : ${state.event.type.name}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text(
-                        text = state.event.description,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Text(state.event.description, style = MaterialTheme.typography.bodyLarge)
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val count = when (participantsState) {
+                            is ParticipantsUiState.Success -> (participantsState as ParticipantsUiState.Success).participants.size
+                            else -> 0
+                        }
+                        Text("Participants ($count)", style = MaterialTheme.typography.titleMedium)
+                        TextButton(onClick = { showAddParticipantDialog = true }) {
+                            Text("+ Ajouter")
+                        }
+                    }
+
+                    when (val pState = participantsState) {
+                        is ParticipantsUiState.Loading -> LoadingScreen(message = "Chargement…")
+                        is ParticipantsUiState.Error -> ErrorMessage(
+                            message = pState.message,
+                            onRetry = { participantsViewModel.loadParticipants(state.event.id) }
+                        )
+                        is ParticipantsUiState.Success -> ParticipantList(
+                            participants = pState.participants,
+                            onUpdateStatus = { email, status ->
+                                participantsViewModel.updateStatus(state.event.id, email, status)
+                            },
+                            onRemove = { email ->
+                                participantsViewModel.remove(state.event.id, email)
+                            }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
                     if (userId != null) {
-                        Spacer(modifier = Modifier.padding(top = 8.dp))
                         HappyRowButton(
                             text = "Supprimer l'événement",
                             onClick = { showDeleteDialog = true },
@@ -134,20 +159,26 @@ fun EventDetailScreen(
             title = { Text("Supprimer l'événement ?") },
             text = { Text("Cette action est irréversible.") },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteDialog = false
-                        eventDetailViewModel.delete(userId)
-                    }
-                ) {
+                TextButton(onClick = { showDeleteDialog = false; eventDetailViewModel.delete(userId) }) {
                     Text("Supprimer", color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Annuler")
-                }
-            }
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Annuler") } }
+        )
+    }
+
+    if (showAddParticipantDialog) {
+        val eventId = (uiState as? EventDetailUiState.Success)?.event?.id ?: ""
+        AddParticipantDialog(
+            onDismiss = {
+                showAddParticipantDialog = false
+                participantsViewModel.clearAddError()
+            },
+            onConfirm = { email, status ->
+                participantsViewModel.addNewParticipant(eventId, email, status)
+                showAddParticipantDialog = false
+            },
+            error = addError
         )
     }
 }
