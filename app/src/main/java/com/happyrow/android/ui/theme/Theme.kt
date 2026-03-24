@@ -10,9 +10,35 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme()
+private val LightColorScheme = lightColorScheme(
+    primary = Primary,
+    onPrimary = OnPrimary,
+    secondary = Secondary,
+    onSecondary = OnSecondary,
+    background = Background,
+    onBackground = OnBackground,
+    surface = Surface,
+    onSurface = OnSurface,
+    error = Error,
+    onError = OnError,
+    surfaceVariant = SurfaceVariant,
+    outline = Outline
+)
 
-private val LightColorScheme = lightColorScheme()
+private val DarkColorScheme = darkColorScheme(
+    primary = DarkPrimary,
+    onPrimary = DarkOnPrimary,
+    secondary = DarkSecondary,
+    onSecondary = DarkOnSecondary,
+    background = DarkBackground,
+    onBackground = DarkOnBackground,
+    surface = DarkSurface,
+    onSurface = DarkOnSurface,
+    error = DarkError,
+    onError = DarkOnError,
+    surfaceVariant = DarkSurfaceVariant,
+    outline = DarkOutline
+)
 
 @Composable
 fun HappyRowTheme(
@@ -31,6 +57,7 @@ fun HappyRowTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
+        typography = Typography,
         content = content
     )
 }
