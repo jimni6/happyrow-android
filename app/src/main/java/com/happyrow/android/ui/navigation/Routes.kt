@@ -6,7 +6,9 @@ sealed class Route(val route: String) {
     object Register : Route("register")
     object ForgotPassword : Route("forgot-password")
     object Home : Route("home")
-    object CreateEvent : Route("create-event")
+    object CreateEvent : Route("create-event/{organizerId}") {
+        fun createRoute(organizerId: String) = "create-event/$organizerId"
+    }
     object EventDetail : Route("events/{eventId}") {
         fun createRoute(eventId: String) = "events/$eventId"
     }
